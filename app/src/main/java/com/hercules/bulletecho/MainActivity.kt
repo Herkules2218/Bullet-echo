@@ -96,7 +96,7 @@ class MainActivity : Activity() {
   }
   root.addView(nav,LinearLayout.LayoutParams(-1,dp(76))); setContentView(root)
   body.addView(label("HERCULES",32f,gold,true))
-  body.addView(label("BULLET ECHO  •  v0.8.0",12f,violet,true))
+  body.addView(label("BULLET ECHO  •  v0.9.0",12f,violet,true))
   body.addView(Space(this),LinearLayout.LayoutParams(1,dp(26)))
   when(page) {
    "home" -> {
@@ -126,6 +126,17 @@ class MainActivity : Activity() {
      val frames=prefs.getLong("capture_frames",0L)
      val error=prefs.getString("capture_error","")
      Toast.makeText(this,"Active: $active · Frames: $frames · Error: $error",Toast.LENGTH_LONG).show()
+    }
+    val detectorCard=card()
+    detectorCard.addView(label("🔎 Visual Detection Prototype",18f,gold,true))
+    detectorCard.addView(label(if(english) "Experimental red-pixel candidate detector. This does not identify enemies or control aim." else "Експериментальний пошук червоних елементів. Не розпізнає ворогів і не керує прицілом.",13f))
+    action(if(english) "Show detection diagnostics" else "Діагностика розпізнавання") {
+     val hits=prefs.getInt("scan_red_hits",0)
+     val candidate=prefs.getBoolean("scan_candidate",false)
+     val x=prefs.getFloat("scan_x",-1f)
+     val y=prefs.getFloat("scan_y",-1f)
+     val error=prefs.getString("scan_error","")
+     Toast.makeText(this,"Candidate: $candidate · Red pixels: $hits · X: ${(x*100).toInt()}% · Y: ${(y*100).toInt()}% · Error: $error",Toast.LENGTH_LONG).show()
     }
     val gameCard=card()
     gameCard.addView(label("🎮 Game Mode",18f,gold,true))
