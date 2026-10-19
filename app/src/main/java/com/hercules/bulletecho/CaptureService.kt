@@ -103,6 +103,12 @@ class CaptureService : Service() {
   * NOT an enemy identity. RGBA planes may have padded row strides.
   */
  private fun scanFrame(image:android.media.Image) {
+  val settings=getSharedPreferences("hercules",MODE_PRIVATE)
+  if(!settings.getBoolean("vision_enabled",true)) {
+   settings.edit().putBoolean("track_active",false).putBoolean("scan_candidate",false).apply()
+   return
+  }
+  val sensitivity=settings.getInt("vision_sensitivity",80).coerceIn(10,100)
   val plane=image.planes.firstOrNull() ?: return
   val bytes=plane.buffer.duplicate().order(ByteOrder.nativeOrder())
   val row=plane.rowStride
@@ -172,11 +178,11 @@ class CaptureService : Service() {
   val now=android.os.SystemClock.elapsedRealtime()
   val close=bestX>=0f && trackX>=0f &&
    kotlin.math.hypot((bestX-trackX).toDouble(),(bestY-trackY).toDouble())<0.08
-  val valid=bestX>=0f && close
+  val valid=bestX>=0f && (close || !settings.getBoolean("vision_tracking",true))
   if(bestX>=0f) {
    trackX=if(close)trackX*0.7f+bestX*0.3f else bestX
    trackY=if(close)trackY*0.7f+bestY*0.3f else bestY
-   if(close) trackTime=now
+   if(valid) trackTime=now
   }
   val tracking=valid && now-trackTime<450L
   getSharedPreferences("hercules",MODE_PRIVATE).edit()
