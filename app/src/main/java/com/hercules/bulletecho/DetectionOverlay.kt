@@ -20,7 +20,7 @@ class DetectionOverlay(context:Context):View(context) {
   super.onDraw(canvas)
   val now=SystemClock.elapsedRealtime()
   val fresh=now-prefs.getLong("scan_timestamp",0L)<800L
-  if(prefs.getBoolean("track_active",false) && fresh) {
+  if(prefs.getBoolean("vision_boxes",false) && prefs.getBoolean("track_active",false) && fresh) {
    val x=prefs.getFloat("track_x",-1f)*width
    val y=prefs.getFloat("track_y",-1f)*height
    if(x>=0 && y>=0) {
@@ -42,11 +42,13 @@ class DetectionOverlay(context:Context):View(context) {
     canvas.drawText(label,l+8f,labelTop+25f,text)
    }
   }
+  if(prefs.getBoolean("vision_debug",true)) {
   val active=prefs.getBoolean("capture_active",false)
   val frames=prefs.getLong("capture_frames",0L)
   val hits=prefs.getInt("scan_red_hits",0)
   canvas.drawText(if(active) "HERCULES | frames: $frames | hits: $hits" else "HERCULES | waiting",20f,44f,status)
   prefs.getString("scan_error",null)?.let {canvas.drawText("Scan error: $it",20f,72f,status)}
+  }
   postInvalidateDelayed(180L)
  }
 }
