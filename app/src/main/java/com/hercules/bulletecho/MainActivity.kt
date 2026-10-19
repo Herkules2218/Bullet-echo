@@ -136,7 +136,7 @@ class MainActivity : Activity() {
      max=100;progress=prefs.getInt("vision_sensitivity",80)
      setOnSeekBarChangeListener(object:SeekBar.OnSeekBarChangeListener {
       override fun onProgressChanged(s:SeekBar?,v:Int,user:Boolean) {
-       if(user) { val n=v.coerceIn(10,100);sensitivityText.text="$"+"{n}%";prefs.edit().putInt("vision_sensitivity",n).apply() }
+       if(user) { val n=v.coerceIn(10,100);sensitivityText.text=n.toString()+"%";prefs.edit().putInt("vision_sensitivity",n).apply() }
       }
       override fun onStartTrackingTouch(s:SeekBar?) {}
       override fun onStopTrackingTouch(s:SeekBar?) {}
