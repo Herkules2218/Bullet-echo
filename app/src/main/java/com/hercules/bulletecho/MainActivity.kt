@@ -40,6 +40,15 @@ class MainActivity : Activity() {
   english=prefs.getBoolean("english",false)
   showPage("home")
  }
+ private fun overlay(action:String) {
+  if(!android.provider.Settings.canDrawOverlays(this)) {
+   startActivity(android.content.Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+    android.net.Uri.parse("package:"+packageName)))
+   Toast.makeText(this,"Дозволь відображення поверх інших застосунків і повернись",Toast.LENGTH_LONG).show()
+   return
+  }
+  startService(android.content.Intent(this,OverlayService::class.java).apply { this.action=action })
+ }
  private fun showPage(page:String) {
   val root=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setBackgroundColor(bg) }
   if (android.os.Build.VERSION.SDK_INT >= 30) {
@@ -72,7 +81,7 @@ class MainActivity : Activity() {
   }
   root.addView(nav,LinearLayout.LayoutParams(-1,dp(76))); setContentView(root)
   body.addView(label("HERCULES",32f,gold,true))
-  body.addView(label("BULLET ECHO  •  v0.4.0",12f,violet,true))
+  body.addView(label("BULLET ECHO  •  v0.5.0",12f,violet,true))
   body.addView(Space(this),LinearLayout.LayoutParams(1,dp(26)))
   when(page) {
    "home" -> {
@@ -84,6 +93,31 @@ class MainActivity : Activity() {
    }
    "features" -> {
     heading(if(english) "FEATURES" else "ФУНКЦІЇ")
+    val crossCard=card()
+    crossCard.addView(label("🎯 Custom Crosshair",18f,gold,true))
+    crossCard.addView(label(if(english) "Crosshair over other apps" else "Приціл поверх інших застосунків",14f))
+    action(if(english) "Enable crosshair" else "Увімкнути приціл") { overlay("cross_on") }
+    action(if(english) "Disable crosshair" else "Вимкнути приціл") { overlay("cross_off") }
+    val bubbleCard=card()
+    bubbleCard.addView(label("💜 HERCULES Floating Menu",18f,gold,true))
+    action(if(english) "Show floating H" else "Показати плаваючу H") { overlay("bubble_on") }
+    action(if(english) "Hide floating H" else "Сховати плаваючу H") { overlay("bubble_off") }
+    val settingsCard=card()
+    settingsCard.addView(label(if(english) "Crosshair options" else "Налаштування прицілу",17f,gold,true))
+    settingsCard.addView(Switch(this).apply {
+     text=if(english) "Dot instead of cross" else "Точка замість хрестика";setTextColor(white)
+     isChecked=prefs.getBoolean("cross_dot",false)
+     setOnCheckedChangeListener { _,v -> prefs.edit().putBoolean("cross_dot",v).apply();overlay("refresh") }
+    })
+    settingsCard.addView(label(if(english) "Opacity" else "Прозорість",14f))
+    settingsCard.addView(SeekBar(this).apply {
+     max=100;progress=prefs.getInt("cross_alpha",90)
+     setOnSeekBarChangeListener(object:SeekBar.OnSeekBarChangeListener {
+      override fun onProgressChanged(s:SeekBar?,v:Int,user:Boolean) { if(user) prefs.edit().putInt("cross_alpha",v.coerceAtLeast(10)).apply() }
+      override fun onStartTrackingTouch(s:SeekBar?) {}
+      override fun onStopTrackingTouch(s:SeekBar?) { overlay("refresh") }
+     })
+    })
     listOf("Visual settings","Notifications","Performance preferences","Custom profile").forEach { key ->
      val translated=when(key) {
       "Visual settings" -> if(english) key else "Візуальні налаштування"
