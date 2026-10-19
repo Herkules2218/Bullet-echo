@@ -116,6 +116,33 @@ class MainActivity : Activity() {
     val aimCard=card()
     aimCard.addView(label("🎯 Aim Assist — Research",18f,gold,true))
     aimCard.addView(label(if(english) "Screen capture works. Character recognition and auto-aim are not implemented." else "Захоплення екрана працює. Розпізнавання персонажів і автонаведення ще не реалізовані.",13f))
+    val visionCard=card()
+    visionCard.addView(label("👁 Enemy Vision · v1.5 LAB",18f,gold,true))
+    visionCard.addView(label(if(english) "Real-time health-bar candidate analysis. Character recognition model is not installed yet; no automatic aiming." else "Аналіз смуг здоров’я в реальному часі. Моделі розпізнавання персонажів ще немає; автонаведення відсутнє.",13f))
+    fun visionSwitch(title:String,key:String,default:Boolean) {
+     visionCard.addView(Switch(this).apply {
+      text=title;setTextColor(white);isChecked=prefs.getBoolean(key,default)
+      setOnCheckedChangeListener { _,v -> prefs.edit().putBoolean(key,v).apply() }
+     })
+    }
+    visionSwitch("Enemy Vision (аналіз)", "vision_enabled",true)
+    visionSwitch("Enemy ESP (рамки)", "vision_esp",true)
+    visionSwitch("Target Tracking (стабілізація)", "vision_tracking",true)
+    visionSwitch("Показ союзників (після навчання моделі)", "vision_allies",true)
+    visionCard.addView(label("Чутливість аналізу",14f))
+    val sensitivityText=label("${prefs.getInt("vision_sensitivity",80)}%",13f,violet)
+    visionCard.addView(sensitivityText)
+    visionCard.addView(SeekBar(this).apply {
+     max=100;progress=prefs.getInt("vision_sensitivity",80)
+     setOnSeekBarChangeListener(object:SeekBar.OnSeekBarChangeListener {
+      override fun onProgressChanged(s:SeekBar?,v:Int,user:Boolean) {
+       if(user) { val n=v.coerceIn(10,100);sensitivityText.text="$"+"{n}%";prefs.edit().putInt("vision_sensitivity",n).apply() }
+      }
+      override fun onStartTrackingTouch(s:SeekBar?) {}
+      override fun onStopTrackingTouch(s:SeekBar?) {}
+     })
+    })
+    visionCard.addView(label("Показ союзників збережено як параметр, але без моделі їх розпізнавання він не впливає на детекцію.",12f,violet))
     val captureCard=card()
     captureCard.addView(label("📷 Enemy Vision Lab · v1.5",18f,gold,true))
     captureCard.addView(label(if(english) "Experimental health-bar candidates, not verified enemy detection or auto-aim." else "Експериментальний пошук смуг здоров’я. Це НЕ розпізнавання персонажів і не автоаім.",13f))
