@@ -110,77 +110,81 @@ class CaptureService : Service() {
   if(pixel<4) return
   val width=image.width
   val height=image.height
-  // Candidate segmentation: connected components rather than merging all red pixels.
-  // These are color candidates, NOT identified enemy players.
-  val step=4
-  val cols=(width+step-1)/step
-  val rows=(height+step-1)/step
-  val mask=BooleanArray(cols*rows)
+  // Health-bar candidate detector. Only horizontal red bars are considered;
+  // arbitrary red effects and isolated pixels are deliberately ignored.
+  val step=2
+  val rows=height/step
+  val cols=width/step
   var hits=0
-  for(gy in 0 until rows) for(gx in 0 until cols) {
-   val x=gx*step; val y=gy*step
-   val offset=y*row+x*pixel
-   if(offset+2>=bytes.limit()) continue
-   val r=bytes.get(offset).toInt() and 255
-   val g=bytes.get(offset+1).toInt() and 255
-   val b=bytes.get(offset+2).toInt() and 255
-   if(r>175 && r>g*1.65 && r>b*1.5 && g<155) {
-    mask[gy*cols+gx]=true
-    hits++
-   }
-  }
-  val seen=BooleanArray(mask.size)
-  val queue=IntArray(mask.size)
-  var bestScore=Double.NEGATIVE_INFINITY
-  var bestX=-1f;var bestY=-1f;var bestW=0f;var bestH=0f
-  for(i in mask.indices) {
-   if(!mask[i] || seen[i]) continue
-   var head=0;var tail=1
-   queue[0]=i;seen[i]=true
-   var count=0;var minX=cols;var minY=rows;var maxX=0;var maxY=0
-   var sumX=0L;var sumY=0L
-   while(head<tail) {
-    val v=queue[head++];val x=v%cols;val y=v/cols
-    count++;sumX+=x;sumY+=y
-    minX=minOf(minX,x);minY=minOf(minY,y)
-    maxX=maxOf(maxX,x);maxY=maxOf(maxY,y)
-    val neighbors=intArrayOf(v-1,v+1,v-cols,v+cols)
-    for(n in neighbors) {
-     if(n<0 || n>=mask.size || !mask[n] || seen[n]) continue
-     if((n==v-1 || n==v+1) && n/cols!=y) continue
-     seen[n]=true;queue[tail++]=n
+  var bestScore=-1.0
+  var bestX=-1f
+  var bestY=-1f
+  var bestW=0f
+  for(gy in 0 until rows) {
+   val y=gy*step
+   var runStart=-1
+   var runLength=0
+   fun considerRun() {
+    if(runStart<0) return
+    // Approximate width of the in-game health bar in half-resolution capture.
+    if(runLength in 10..85) {
+     val centerX=(runStart+runLength/2f)*step
+     val normalizedX=centerX/width
+     val normalizedY=y.toFloat()/height
+     // Reject edges and the lower-center player HUD.
+     if(normalizedX in 0.06f..0.94f && normalizedY in 0.08f..0.84f &&
+       !(normalizedX in 0.38f..0.62f && normalizedY>0.72f)) {
+      val score=runLength.toDouble()
+      if(score>bestScore) {
+       bestScore=score
+       bestX=normalizedX
+       // Sprite is generally above its health bar; estimate its center.
+       bestY=((y-34f)/height).coerceIn(0f,1f)
+       bestW=(runLength*step.toFloat()/width).coerceAtMost(0.15f)
+      }
+     }
     }
    }
-   val bw=(maxX-minX+1f)/cols
-   val bh=(maxY-minY+1f)/rows
-   if(count<3 || count>180 || bw>0.13f || bh>0.22f) continue
-   val cx=(sumX.toFloat()/count+0.5f)/cols
-   val cy=(sumY.toFloat()/count+0.5f)/rows
-   // Exclude central aiming cone and player's sprite region.
-   if(cx in 0.38f..0.62f && cy in 0.30f..0.80f) continue
-   val near=if(trackX>=0f) kotlin.math.hypot((cx-trackX).toDouble(),(cy-trackY).toDouble()) else 1.0
-   val score=count.toDouble()-near*20.0
-   if(score>bestScore) {
-    bestScore=score;bestX=cx;bestY=cy;bestW=bw;bestH=bh
+   for(gx in 0 until cols) {
+    val x=gx*step
+    val offset=y*row+x*pixel
+    if(offset+2>=bytes.limit()) continue
+    val r=bytes.get(offset).toInt() and 255
+    val g=bytes.get(offset+1).toInt() and 255
+    val b=bytes.get(offset+2).toInt() and 255
+    val red=r>190 && g<100 && b<110 && r>g*2
+    if(red) {
+     hits++
+     if(runStart<0)runStart=gx
+     runLength++
+    } else {
+     considerRun()
+     runStart=-1
+     runLength=0
+    }
    }
+   considerRun()
   }
-  val valid=bestX>=0f
+  // Do not track a random red line as a confirmed enemy.
+  // Requiring several consecutive frames greatly reduces jumping.
   val now=android.os.SystemClock.elapsedRealtime()
-  val close=valid && trackX>=0f && kotlin.math.hypot((bestX-trackX).toDouble(),(bestY-trackY).toDouble())<0.16
-  if(valid) {
-   trackX=if(close)trackX*0.6f+bestX*0.4f else bestX
-   trackY=if(close)trackY*0.6f+bestY*0.4f else bestY
-   trackTime=now
+  val close=bestX>=0f && trackX>=0f &&
+   kotlin.math.hypot((bestX-trackX).toDouble(),(bestY-trackY).toDouble())<0.08
+  val valid=bestX>=0f && close
+  if(bestX>=0f) {
+   trackX=if(close)trackX*0.7f+bestX*0.3f else bestX
+   trackY=if(close)trackY*0.7f+bestY*0.3f else bestY
+   if(close) trackTime=now
   }
-  val tracking=trackX>=0f && now-trackTime<600L
+  val tracking=valid && now-trackTime<450L
   getSharedPreferences("hercules",MODE_PRIVATE).edit()
    .putInt("scan_red_hits",hits)
    .putBoolean("scan_candidate",valid)
    .putBoolean("track_active",tracking)
    .putFloat("track_x",if(tracking)trackX else -1f)
    .putFloat("track_y",if(tracking)trackY else -1f)
-   .putFloat("scan_box_w",if(valid)bestW else 0f)
-   .putFloat("scan_box_h",if(valid)bestH else 0f)
+   .putFloat("scan_box_w",if(tracking)bestW else 0f)
+   .putFloat("scan_box_h",if(tracking)0.11f else 0f)
    .putLong("scan_timestamp",now)
    .apply()
  }
