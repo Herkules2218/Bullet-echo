@@ -81,7 +81,7 @@ class MainActivity : Activity() {
   }
   root.addView(nav,LinearLayout.LayoutParams(-1,dp(76))); setContentView(root)
   body.addView(label("HERCULES",32f,gold,true))
-  body.addView(label("BULLET ECHO  •  v0.5.0",12f,violet,true))
+  body.addView(label("BULLET ECHO  •  v0.6.0",12f,violet,true))
   body.addView(Space(this),LinearLayout.LayoutParams(1,dp(26)))
   when(page) {
    "home" -> {
@@ -98,6 +98,9 @@ class MainActivity : Activity() {
     crossCard.addView(label(if(english) "Crosshair over other apps" else "Приціл поверх інших застосунків",14f))
     action(if(english) "Enable crosshair" else "Увімкнути приціл") { overlay("cross_on") }
     action(if(english) "Disable crosshair" else "Вимкнути приціл") { overlay("cross_off") }
+    val aimCard=card()
+    aimCard.addView(label("🎯 Aim Assist — Research",18f,gold,true))
+    aimCard.addView(label(if(english) "Target tracking is not active. Requires separate technical development." else "Автоматичне наведення поки не реалізоване. Потрібна окрема розробка.",13f))
     val bubbleCard=card()
     bubbleCard.addView(label("💜 HERCULES Floating Menu",18f,gold,true))
     action(if(english) "Show floating H" else "Показати плаваючу H") { overlay("bubble_on") }
