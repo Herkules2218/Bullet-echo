@@ -96,7 +96,7 @@ class MainActivity : Activity() {
   }
   root.addView(nav,LinearLayout.LayoutParams(-1,dp(76))); setContentView(root)
   body.addView(label("HERCULES",32f,gold,true))
-  body.addView(label("BULLET ECHO  •  v1.0.0",12f,violet,true))
+  body.addView(label("BULLET ECHO  •  v1.5 LAB",12f,violet,true))
   body.addView(Space(this),LinearLayout.LayoutParams(1,dp(26)))
   when(page) {
    "home" -> {
@@ -115,10 +115,37 @@ class MainActivity : Activity() {
     action(if(english) "Disable crosshair" else "Вимкнути приціл") { overlay("cross_off") }
     val aimCard=card()
     aimCard.addView(label("🎯 Aim Assist — Research",18f,gold,true))
-    aimCard.addView(label(if(english) "Research stage: screen capture and target detection are not implemented. No automatic aiming." else "Етап дослідження: захоплення екрана та розпізнавання цілей ще не реалізовані. Автонаведення немає.",13f))
+    aimCard.addView(label(if(english) "Screen capture works. Character recognition and auto-aim are not implemented." else "Захоплення екрана працює. Розпізнавання персонажів і автонаведення ще не реалізовані.",13f))
     val captureCard=card()
-    captureCard.addView(label("📷 Visual Tracker Lab · v1.0",18f,gold,true))
-    captureCard.addView(label(if(english) "Experimental yellow bounding box around red visual candidates. Not enemy recognition or automatic aim." else "Показує жовту діагностичну рамку навколо червоних ділянок. Це НЕ розпізнавання ворогів і не аімбот.",13f))
+    captureCard.addView(label("📷 Enemy Vision Lab · v1.5",18f,gold,true))
+    captureCard.addView(label(if(english) "Experimental health-bar candidates, not verified enemy detection or auto-aim." else "Експериментальний пошук смуг здоров’я. Це НЕ розпізнавання персонажів і не автоаім.",13f))
+    val visionCard=card()
+    visionCard.addView(label("💜 Enemy Vision Lab · controls",18f,gold,true))
+    visionCard.addView(label(if(english) "Current mode: health-bar heuristic, not character recognition." else "Поточний режим: пошук смуг здоров'я, а не розпізнавання персонажів.",13f))
+    visionCard.addView(Switch(this).apply {
+     text=if(english) "Show candidate brackets" else "Показувати рамки кандидатів"
+     setTextColor(white)
+     isChecked=prefs.getBoolean("vision_boxes",false)
+     setOnCheckedChangeListener { _,v -> prefs.edit().putBoolean("vision_boxes",v).apply() }
+    })
+    visionCard.addView(Switch(this).apply {
+     text=if(english) "Show scan diagnostics" else "Показувати діагностику сканера"
+     setTextColor(white)
+     isChecked=prefs.getBoolean("vision_debug",true)
+     setOnCheckedChangeListener { _,v -> prefs.edit().putBoolean("vision_debug",v).apply() }
+    })
+    visionCard.addView(label(if(english) "Detection sensitivity (experimental)" else "Чутливість пошуку (експериментальна)",14f))
+    visionCard.addView(SeekBar(this).apply {
+     max=90;progress=prefs.getInt("vision_sensitivity",65).coerceIn(10,100)-10
+     setOnSeekBarChangeListener(object:SeekBar.OnSeekBarChangeListener {
+      override fun onProgressChanged(s:SeekBar?,v:Int,user:Boolean) {
+       if(user) prefs.edit().putInt("vision_sensitivity",v+10).apply()
+      }
+      override fun onStartTrackingTouch(s:SeekBar?) {}
+      override fun onStopTrackingTouch(s:SeekBar?) {}
+     })
+    })
+    visionCard.addView(label(if(english) "The red firing cone is never changed. No touch injection." else "Червоний сектор стрільби не змінюється. Керування грою відсутнє.",12f,violet))
     action(if(english) "Start screen analysis" else "Запустити аналіз екрана") { requestCapture() }
     action(if(english) "Stop screen analysis" else "Зупинити аналіз екрана") { startService(android.content.Intent(this,CaptureService::class.java).apply { action="stop" }) }
     action(if(english) "Check capture status" else "Перевірити захоплення") {
