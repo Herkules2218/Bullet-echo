@@ -35,7 +35,7 @@ class DetectionOverlay(context:Context):View(context) {
     canvas.drawLine(r,t,r-corner,t,frame);canvas.drawLine(r,t,r,t+corner,frame)
     canvas.drawLine(l,b,l+corner,b,frame);canvas.drawLine(l,b,l,b-corner,frame)
     canvas.drawLine(r,b,r-corner,b,frame);canvas.drawLine(r,b,r,b-corner,frame)
-    val label="VISUAL CANDIDATE"
+    val label="BAR CANDIDATE"
     val tw=text.measureText(label)+16f
     val labelTop=(t-36f).coerceAtLeast(0f)
     canvas.drawRoundRect(l,labelTop,(l+tw).coerceAtMost(width.toFloat()),labelTop+33f,5f,5f,labelBg)
