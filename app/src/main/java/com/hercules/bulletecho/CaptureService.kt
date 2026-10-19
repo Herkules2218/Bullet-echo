@@ -38,8 +38,9 @@ class CaptureService : Service() {
    .setOngoing(true).build()
   if(Build.VERSION.SDK_INT>=34) startForeground(81,notification,ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION)
   else startForeground(81,notification)
-  val token=if(Build.VERSION.SDK_INT>=33) intent?.getParcelableExtra("token",Intent::class.java)
-   else @Suppress("DEPRECATION") intent?.getParcelableExtra<Intent>("token")
+  @Suppress("DEPRECATION")
+  val token:Intent?=if(Build.VERSION.SDK_INT>=33) intent?.getParcelableExtra("token",Intent::class.java)
+   else intent?.getParcelableExtra("token")
   if(token==null) { stopSelf();return START_NOT_STICKY }
   try {
    val mp=getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
@@ -52,7 +53,7 @@ class CaptureService : Service() {
     val b=(getSystemService(WINDOW_SERVICE) as WindowManager).maximumWindowMetrics.bounds
     Pair(b.width(),b.height())
    } else {
-    @Suppress("DEPRECATION") val d=resources.displayMetrics
+    val d=resources.displayMetrics
     Pair(d.widthPixels,d.heightPixels)
    }
    val w=(metrics.first/2).coerceAtLeast(2)
