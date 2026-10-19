@@ -36,16 +36,17 @@ class MainActivity : Activity() {
   super.onCreate(savedInstanceState)
   window.statusBarColor=bg; window.navigationBarColor=bg
   window.decorView.systemUiVisibility=0
+  window.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
   english=prefs.getBoolean("english",false)
   showPage("home")
  }
  private fun showPage(page:String) {
   val root=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setBackgroundColor(bg) }
   val scroll=ScrollView(this)
-  body=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setPadding(dp(20),dp(24),dp(20),dp(30)) }
+  body=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setPadding(dp(20),dp(48),dp(20),dp(30)) }
   scroll.addView(body)
   root.addView(scroll,LinearLayout.LayoutParams(-1,0,1f))
-  val nav=LinearLayout(this).apply { setBackgroundColor(panel); gravity=Gravity.CENTER }
+  val nav=LinearLayout(this).apply { setBackgroundColor(panel); gravity=Gravity.CENTER; setPadding(0,dp(8),0,dp(12)) }
   listOf("home","features","profiles","settings").forEach { key ->
    val text=when(key) {
     "home" -> if(english) "Home" else "Головна"
@@ -54,12 +55,12 @@ class MainActivity : Activity() {
     else -> if(english) "Settings" else "Опції"
    }
    nav.addView(label(text,12f,if(page==key) gold else white,true).apply {
-    gravity=Gravity.CENTER; setPadding(dp(2),dp(18),dp(2),dp(18)); setOnClickListener { showPage(key) }
+    gravity=Gravity.CENTER; setPadding(dp(2),dp(12),dp(2),dp(12)); setOnClickListener { showPage(key) }
    },LinearLayout.LayoutParams(0,-2,1f))
   }
-  root.addView(nav); setContentView(root)
+  root.addView(nav,LinearLayout.LayoutParams(-1,dp(76))); setContentView(root)
   body.addView(label("HERCULES",32f,gold,true))
-  body.addView(label("BULLET ECHO  •  v0.2.0",12f,violet,true))
+  body.addView(label("BULLET ECHO  •  v0.3.0",12f,violet,true))
   body.addView(Space(this),LinearLayout.LayoutParams(1,dp(26)))
   when(page) {
    "home" -> {
@@ -72,8 +73,16 @@ class MainActivity : Activity() {
    "features" -> {
     heading(if(english) "FEATURES" else "ФУНКЦІЇ")
     listOf("Visual settings","Notifications","Performance preferences","Custom profile").forEach { key ->
+     val translated=when(key) {
+      "Visual settings" -> if(english) key else "Візуальні налаштування"
+      "Notifications" -> if(english) key else "Сповіщення"
+      "Performance preferences" -> if(english) key else "Продуктивність"
+      else -> if(english) key else "Власний профіль"
+     }
      card().addView(Switch(this).apply {
-      text=key; textSize=16f; setTextColor(white); isChecked=prefs.getBoolean(key,false)
+      text=translated; textSize=16f; setTextColor(white); isChecked=prefs.getBoolean(key,false)
+      thumbTintList=android.content.res.ColorStateList.valueOf(gold)
+      trackTintList=android.content.res.ColorStateList.valueOf(Color.rgb(92,67,126))
       setOnCheckedChangeListener { _,value -> prefs.edit().putBoolean(key,value).apply() }
      })
     }
@@ -83,7 +92,7 @@ class MainActivity : Activity() {
     heading(if(english) "PROFILES" else "ПРОФІЛІ")
     val c=card()
     listOf("Default","Custom 1","Custom 2").forEach { name ->
-     c.addView(Button(this).apply { text=name; isAllCaps=false; setOnClickListener {
+     c.addView(Button(this).apply { text=name; isAllCaps=false; setTextColor(white); background=shape(if(prefs.getString("profile","Default")==name) Color.rgb(111,65,155) else Color.rgb(68,42,103)); setOnClickListener {
       prefs.edit().putString("profile",name).apply(); showPage("profiles")
      } })
     }
@@ -93,6 +102,7 @@ class MainActivity : Activity() {
     heading(if(english) "SETTINGS" else "НАЛАШТУВАННЯ")
     card().addView(Switch(this).apply {
      text=if(english) "English" else "English / Українська"; setTextColor(white); textSize=16f; isChecked=english
+     thumbTintList=android.content.res.ColorStateList.valueOf(gold)
      setOnCheckedChangeListener { _,value ->
       english=value; prefs.edit().putBoolean("english",value).apply(); showPage("settings")
      }
