@@ -109,8 +109,9 @@ class OverlayService: Service() {
    x=12
   })
  }
+ private fun closeMenu() { val old=menu;menu=null;old?.post { if(old.isAttachedToWindow) wm.removeView(old) } }
  private fun toggleMenu() {
-  if(menu!=null) { menu?.let { wm.removeView(it) };menu=null;return }
+  if(menu!=null) { closeMenu();return }
   val p=getSharedPreferences("hercules",MODE_PRIVATE)
   val layout=android.widget.LinearLayout(this).apply {
    orientation=android.widget.LinearLayout.VERTICAL
@@ -149,7 +150,7 @@ class OverlayService: Service() {
    editing=false;showCross()
    menu?.let { wm.removeView(it) };menu=null
   }
-  item("✕ Закрити меню") { menu?.let { wm.removeView(it) };menu=null }
+  item("✕ Закрити меню") { closeMenu() }
   menu=layout
   wm.addView(layout,params((235*resources.displayMetrics.density).toInt(),-2,Gravity.END or Gravity.CENTER_VERTICAL).apply {
    flags=WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
