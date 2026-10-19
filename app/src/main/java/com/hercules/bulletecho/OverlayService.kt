@@ -21,6 +21,7 @@ class OverlayService: Service() {
  private var bubble:TextView?=null
  private var menu:android.widget.LinearLayout?=null
  private var editing=false
+ private var locked=false
  private fun orientationKey()=if(resources.configuration.orientation==android.content.res.Configuration.ORIENTATION_LANDSCAPE) "_land" else "_port"
  override fun onBind(intent:Intent?):IBinder?=null
  override fun onStartCommand(intent:Intent?,flags:Int,startId:Int):Int {
@@ -48,6 +49,7 @@ class OverlayService: Service() {
   val color=when(p.getInt("cross_color",0)) { 1->Color.WHITE;2->Color.RED;3->Color.GREEN;else->Color.rgb(235,186,83) }
   val alpha=p.getInt("cross_alpha",90)
   val dot=p.getBoolean("cross_dot",false)
+  val style=p.getInt("cross_style",0)
   cross=object:View(this) {
    var sx=0f;var sy=0f;var bx=0;var by=0
    override fun onTouchEvent(e:android.view.MotionEvent):Boolean {
@@ -60,10 +62,12 @@ class OverlayService: Service() {
     }
     return true
    }
-   private val paint=Paint(3).apply { this.color=color; this.alpha=alpha*255/100; strokeWidth=3f*resources.displayMetrics.density; strokeCap=Paint.Cap.ROUND }
+   private val paint=Paint(3).apply { this.color=color; this.alpha=alpha*255/100; strokeWidth=p.getInt("cross_thickness",3)*resources.displayMetrics.density; strokeCap=Paint.Cap.ROUND }
    override fun onDraw(c:Canvas) {
     val x=width/2f;val y=height/2f
-    if(dot) c.drawCircle(x,y,3.5f*resources.displayMetrics.density,paint)
+    if(dot || style==1) c.drawCircle(x,y,3.5f*resources.displayMetrics.density,paint)
+    else if(style==2 || style==3) { paint.style=Paint.Style.STROKE;c.drawCircle(x,y,size*resources.displayMetrics.density/2,paint);if(style==3)c.drawCircle(x,y,3f*resources.displayMetrics.density,paint) }
+    else if(style==4 || style==5) { val r=size*resources.displayMetrics.density/2;if(style==4){c.drawLine(x-r,y,x+r,y,paint);c.drawLine(x,y-r,x,y+r,paint)}else{c.drawLine(x-r,y-r,x+r,y+r,paint);c.drawLine(x-r,y+r,x+r,y-r,paint)} }
     else {
      val r=size*resources.displayMetrics.density/2
      val gap=4*resources.displayMetrics.density
@@ -127,21 +131,25 @@ class OverlayService: Service() {
   val p=getSharedPreferences("hercules",MODE_PRIVATE)
   val layout=android.widget.LinearLayout(this).apply {
    orientation=android.widget.LinearLayout.VERTICAL
-   setPadding(20,20,20,20)
+   setPadding(12,10,12,10)
    background=android.graphics.drawable.GradientDrawable().apply {
     setColor(Color.rgb(34,24,54));cornerRadius=28f
    }
   }
   fun item(title:String,action:()->Unit) {
    layout.addView(TextView(this).apply {
-    text=title;textSize=17f;setTextColor(Color.WHITE);setPadding(16,16,16,16)
+    text=title;textSize=15f;setTextColor(Color.WHITE);setPadding(10,10,10,10)
     setOnClickListener { action() }
    })
   }
+  item("✕ Закрити меню") { closeMenu() }
   item("🎯 "+if(cross==null)"Увімкнути приціл" else "Вимкнути приціл") {
    if(cross==null) showCross() else { cross?.let { wm.removeView(it) };cross=null }
    menu?.let { wm.removeView(it) };menu=null
   }
+  item("◉ Стиль прицілу") { p.edit().putInt("cross_style",(p.getInt("cross_style",0)+1)%6).apply();if(cross!=null)showCross() }
+  item("▥ Товщина ліній") { p.edit().putInt("cross_thickness",(p.getInt("cross_thickness",3)%6)+1).apply();if(cross!=null)showCross() }
+  item("◐ Прозорість") { p.edit().putInt("cross_alpha",if(p.getInt("cross_alpha",90)<=30)100 else p.getInt("cross_alpha",90)-20).apply();if(cross!=null)showCross() }
   item("🎨 Змінити колір") {
    p.edit().putInt("cross_color",(p.getInt("cross_color",0)+1)%4).apply()
    if(cross!=null) showCross()
@@ -154,7 +162,9 @@ class OverlayService: Service() {
    p.edit().putInt("cross_size",(p.getInt("cross_size",26)-4).coerceAtLeast(8)).apply()
    if(cross!=null) showCross()
   }
+  item("🔒 Блокування позиції") { locked=!locked;if(locked && editing){editing=false;if(cross!=null)showCross()};closeMenu() }
   item("↔ Перемістити приціл") {
+   if(locked) { android.widget.Toast.makeText(this,"Розблокуй позицію",android.widget.Toast.LENGTH_SHORT).show();return@item }
    menu?.let { wm.removeView(it) };menu=null
    editing=true;showCross()
   }
@@ -166,7 +176,6 @@ class OverlayService: Service() {
    editing=false;showCross()
    menu?.let { wm.removeView(it) };menu=null
   }
-  item("✕ Закрити меню") { closeMenu() }
   menu=layout
   wm.addView(layout,params((235*resources.displayMetrics.density).toInt(),-2,Gravity.END or Gravity.CENTER_VERTICAL).apply {
    flags=WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
