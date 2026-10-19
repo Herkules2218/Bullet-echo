@@ -40,6 +40,21 @@ class MainActivity : Activity() {
   english=prefs.getBoolean("english",false)
   showPage("home")
  }
+ private fun requestCapture() {
+  val mp=getSystemService(MEDIA_PROJECTION_SERVICE) as android.media.projection.MediaProjectionManager
+  startActivityForResult(mp.createScreenCaptureIntent(),808)
+ }
+ override fun onActivityResult(requestCode:Int,resultCode:Int,data:android.content.Intent?) {
+  super.onActivityResult(requestCode,resultCode,data)
+  if(requestCode==808 && resultCode==RESULT_OK && data!=null) {
+   prefs.edit().putLong("capture_frames",0L).remove("capture_error").apply()
+   val service=android.content.Intent(this,CaptureService::class.java).apply {
+    action="start";putExtra("token",data)
+   }
+   startForegroundService(service)
+   Toast.makeText(this,"Аналіз кадрів запущено",Toast.LENGTH_LONG).show()
+  }
+ }
  private fun overlay(action:String) {
   if(!android.provider.Settings.canDrawOverlays(this)) {
    startActivity(android.content.Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
@@ -81,7 +96,7 @@ class MainActivity : Activity() {
   }
   root.addView(nav,LinearLayout.LayoutParams(-1,dp(76))); setContentView(root)
   body.addView(label("HERCULES",32f,gold,true))
-  body.addView(label("BULLET ECHO  •  v0.7.0",12f,violet,true))
+  body.addView(label("BULLET ECHO  •  v0.8.0",12f,violet,true))
   body.addView(Space(this),LinearLayout.LayoutParams(1,dp(26)))
   when(page) {
    "home" -> {
@@ -101,6 +116,17 @@ class MainActivity : Activity() {
     val aimCard=card()
     aimCard.addView(label("🎯 Aim Assist — Research",18f,gold,true))
     aimCard.addView(label(if(english) "Research stage: screen capture and target detection are not implemented. No automatic aiming." else "Етап дослідження: захоплення екрана та розпізнавання цілей ще не реалізовані. Автонаведення немає.",13f))
+    val captureCard=card()
+    captureCard.addView(label("📷 Enemy Detection Lab · v0.8",18f,gold,true))
+    captureCard.addView(label(if(english) "Experimental capture: counts frames only. Enemy recognition and aimbot are NOT active." else "Експеримент: захоплення та підрахунок кадрів. Розпізнавання ворогів і аімбот ще НЕ працюють.",13f))
+    action(if(english) "Start screen analysis" else "Запустити аналіз екрана") { requestCapture() }
+    action(if(english) "Stop screen analysis" else "Зупинити аналіз екрана") { startService(android.content.Intent(this,CaptureService::class.java).apply { action="stop" }) }
+    action(if(english) "Check capture status" else "Перевірити захоплення") {
+     val active=prefs.getBoolean("capture_active",false)
+     val frames=prefs.getLong("capture_frames",0L)
+     val error=prefs.getString("capture_error","")
+     Toast.makeText(this,"Active: $active · Frames: $frames · Error: $error",Toast.LENGTH_LONG).show()
+    }
     val gameCard=card()
     gameCard.addView(label("🎮 Game Mode",18f,gold,true))
     gameCard.addView(label(if(english) "Hide the H bubble during play; restore it from this screen." else "Приховуй кнопку H під час гри й повертай її звідси.",13f))
