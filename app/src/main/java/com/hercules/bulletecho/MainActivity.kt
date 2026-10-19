@@ -96,7 +96,7 @@ class MainActivity : Activity() {
   }
   root.addView(nav,LinearLayout.LayoutParams(-1,dp(76))); setContentView(root)
   body.addView(label("HERCULES",32f,gold,true))
-  body.addView(label("BULLET ECHO  •  v0.9.0",12f,violet,true))
+  body.addView(label("BULLET ECHO  •  v1.0.0",12f,violet,true))
   body.addView(Space(this),LinearLayout.LayoutParams(1,dp(26)))
   when(page) {
    "home" -> {
@@ -117,8 +117,8 @@ class MainActivity : Activity() {
     aimCard.addView(label("🎯 Aim Assist — Research",18f,gold,true))
     aimCard.addView(label(if(english) "Research stage: screen capture and target detection are not implemented. No automatic aiming." else "Етап дослідження: захоплення екрана та розпізнавання цілей ще не реалізовані. Автонаведення немає.",13f))
     val captureCard=card()
-    captureCard.addView(label("📷 Enemy Detection Lab · v0.8",18f,gold,true))
-    captureCard.addView(label(if(english) "Experimental capture: counts frames only. Enemy recognition and aimbot are NOT active." else "Експеримент: захоплення та підрахунок кадрів. Розпізнавання ворогів і аімбот ще НЕ працюють.",13f))
+    captureCard.addView(label("📷 Visual Tracker Lab · v1.0",18f,gold,true))
+    captureCard.addView(label(if(english) "Experimental yellow bounding box around red visual candidates. Not enemy recognition or automatic aim." else "Показує жовту діагностичну рамку навколо червоних ділянок. Це НЕ розпізнавання ворогів і не аімбот.",13f))
     action(if(english) "Start screen analysis" else "Запустити аналіз екрана") { requestCapture() }
     action(if(english) "Stop screen analysis" else "Зупинити аналіз екрана") { startService(android.content.Intent(this,CaptureService::class.java).apply { action="stop" }) }
     action(if(english) "Check capture status" else "Перевірити захоплення") {
