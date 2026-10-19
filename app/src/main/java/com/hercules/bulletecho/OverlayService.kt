@@ -21,6 +21,7 @@ class OverlayService: Service() {
  private var bubble:TextView?=null
  private var menu:android.widget.LinearLayout?=null
  private var editing=false
+ private fun orientationKey()=if(resources.configuration.orientation==android.content.res.Configuration.ORIENTATION_LANDSCAPE) "_land" else "_port"
  override fun onBind(intent:Intent?):IBinder?=null
  override fun onStartCommand(intent:Intent?,flags:Int,startId:Int):Int {
   if(!Settings.canDrawOverlays(this)) { stopSelf(); return START_NOT_STICKY }
@@ -55,7 +56,7 @@ class OverlayService: Service() {
     when(e.actionMasked) {
      0 -> { sx=e.rawX;sy=e.rawY;bx=lp.x;by=lp.y }
      2 -> { lp.x=bx+(e.rawX-sx).toInt();lp.y=by+(e.rawY-sy).toInt();wm.updateViewLayout(this,lp) }
-     1 -> { getSharedPreferences("hercules",MODE_PRIVATE).edit().putInt("cross_x",lp.x).putInt("cross_y",lp.y).apply() }
+     1 -> { getSharedPreferences("hercules",MODE_PRIVATE).edit().putInt("cross_x"+orientationKey(),lp.x).putInt("cross_y"+orientationKey(),lp.y).apply() }
     }
     return true
    }
@@ -72,13 +73,13 @@ class OverlayService: Service() {
    }
   }
   val lp=params((100*resources.displayMetrics.density).toInt(),(100*resources.displayMetrics.density).toInt(),Gravity.CENTER).apply {
-   x=p.getInt("cross_x",0);y=p.getInt("cross_y",0)
+   x=p.getInt("cross_x"+orientationKey(),0);y=p.getInt("cross_y"+orientationKey(),0)
    flags=WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or (if(editing) 0 else WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE)
   }
   wm.addView(cross,lp)
  }
  private fun hideBubble() {
-  menu?.let { wm.removeView(it) };menu=null
+  closeMenu()
   bubble?.let { wm.removeView(it) };bubble=null
  }
  private fun showBubble() {
@@ -98,7 +99,10 @@ class OverlayService: Service() {
        if(kotlin.math.abs(e.rawX-sx)>12 || kotlin.math.abs(e.rawY-sy)>12) moved=true
        if(moved) {lp.x=bx-(e.rawX-sx).toInt();lp.y=by+(e.rawY-sy).toInt();wm.updateViewLayout(v,lp)}
       }
-      1 -> if(!moved) toggleMenu()
+      1 -> {
+       if(!moved) toggleMenu()
+       else getSharedPreferences("hercules",MODE_PRIVATE).edit().putInt("bubble_x"+orientationKey(),lp.x).putInt("bubble_y"+orientationKey(),lp.y).apply()
+      }
      }
      return true
     }
@@ -106,10 +110,18 @@ class OverlayService: Service() {
   }
   wm.addView(bubble,params((54*resources.displayMetrics.density).toInt(),(54*resources.displayMetrics.density).toInt(),Gravity.END or Gravity.CENTER_VERTICAL).apply {
    flags=WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
-   x=12
+   val prefs=getSharedPreferences("hercules",MODE_PRIVATE)
+   x=prefs.getInt("bubble_x"+orientationKey(),12)
+   y=prefs.getInt("bubble_y"+orientationKey(),0)
   })
  }
- private fun closeMenu() { val old=menu;menu=null;old?.post { if(old.isAttachedToWindow) wm.removeView(old) } }
+ private fun closeMenu() {
+  val old=menu ?: return
+  menu=null
+  Handler(Looper.getMainLooper()).post {
+   try { if(old.isAttachedToWindow) wm.removeViewImmediate(old) } catch(_:IllegalArgumentException) {}
+  }
+ }
  private fun toggleMenu() {
   if(menu!=null) { closeMenu();return }
   val p=getSharedPreferences("hercules",MODE_PRIVATE)
@@ -145,6 +157,10 @@ class OverlayService: Service() {
   item("↔ Перемістити приціл") {
    menu?.let { wm.removeView(it) };menu=null
    editing=true;showCross()
+  }
+  item("⌖ Скинути позицію прицілу") {
+   p.edit().remove("cross_x"+orientationKey()).remove("cross_y"+orientationKey()).apply()
+   editing=false;showCross();closeMenu()
   }
   item("✓ Зберегти позицію") {
    editing=false;showCross()
