@@ -23,6 +23,13 @@ class DetectionOverlay(context:Context):View(context) {
    canvas.drawRect(x-halfW,y-halfH,x+halfW,y+halfH,paint)
    canvas.drawText("TRACK CANDIDATE", (x-halfW).coerceAtLeast(0f),(y-halfH-10f).coerceAtLeast(35f),textPaint)
   }
+  val active=prefs.getBoolean("capture_active",false)
+  val hits=prefs.getInt("scan_red_hits",0)
+  val error=prefs.getString("scan_error",null)
+  textPaint.textSize=24f
+  textPaint.color=Color.YELLOW
+  canvas.drawText(if(active) "HERCULES SCAN | frames: ${prefs.getLong("capture_frames",0L)} | hits: $hits" else "HERCULES SCAN | waiting",20f,48f,textPaint)
+  if(error!=null) canvas.drawText("Scan error: $error",20f,80f,textPaint)
   postInvalidateDelayed(180L)
  }
 }
