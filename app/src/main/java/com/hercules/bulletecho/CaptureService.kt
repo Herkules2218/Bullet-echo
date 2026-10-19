@@ -25,6 +25,9 @@ class CaptureService : Service() {
  private var thread:HandlerThread?=null
  private var frames=0L
  private var lastScan=0L
+ private var trackX=-1f
+ private var trackY=-1f
+ private var trackTime=0L
  private var diagnosticOverlay:DetectionOverlay?=null
  private val callback=object:MediaProjection.Callback() {
   override fun onStop() { stopSelf() }
@@ -129,12 +132,26 @@ class CaptureService : Service() {
     }
    }
   }
-  val valid=hits>=5
+  val boxWidth=if(hits>0)(maxX-minX).toFloat()/width else 0f
+  val boxHeight=if(hits>0)(maxY-minY).toFloat()/height else 0f
+  val valid=hits>=5 && boxWidth<0.32f && boxHeight<0.42f
+  val candidateX=if(valid)sumX.toFloat()/hits/width else -1f
+  val candidateY=if(valid)sumY.toFloat()/hits/height else -1f
+  val close=valid && trackX>=0f && kotlin.math.hypot((candidateX-trackX).toDouble(),(candidateY-trackY).toDouble())<0.20
+  if(valid) {
+   trackX=if(close)trackX*0.65f+candidateX*0.35f else candidateX
+   trackY=if(close)trackY*0.65f+candidateY*0.35f else candidateY
+   trackTime=android.os.SystemClock.elapsedRealtime()
+  }
+  val tracking=trackX>=0f && android.os.SystemClock.elapsedRealtime()-trackTime<650L
   getSharedPreferences("hercules",MODE_PRIVATE).edit()
    .putInt("scan_red_hits",hits)
    .putBoolean("scan_candidate",valid)
-   .putFloat("scan_x",if(valid)sumX.toFloat()/hits/width else -1f)
-   .putFloat("scan_y",if(valid)sumY.toFloat()/hits/height else -1f)
+   .putBoolean("track_active",tracking)
+   .putFloat("track_x",if(tracking)trackX else -1f)
+   .putFloat("track_y",if(tracking)trackY else -1f)
+   .putFloat("scan_x",candidateX)
+   .putFloat("scan_y",candidateY)
    .putFloat("scan_box_w",if(valid)(maxX-minX).toFloat()/width else 0f)
    .putFloat("scan_box_h",if(valid)(maxY-minY).toFloat()/height else 0f)
    .putLong("scan_timestamp",android.os.SystemClock.elapsedRealtime())
