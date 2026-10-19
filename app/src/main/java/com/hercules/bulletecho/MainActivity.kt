@@ -42,6 +42,17 @@ class MainActivity : Activity() {
  }
  private fun showPage(page:String) {
   val root=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setBackgroundColor(bg) }
+  if (android.os.Build.VERSION.SDK_INT >= 30) {
+   root.setOnApplyWindowInsetsListener { view, insets ->
+    val bars=insets.getInsets(android.view.WindowInsets.Type.navigationBars())
+    view.setPadding(0,0,0,bars.bottom)
+    insets
+   }
+  } else {
+   @Suppress("DEPRECATION")
+   val navId=resources.getIdentifier("navigation_bar_height","dimen","android")
+   if(navId>0) root.setPadding(0,0,0,resources.getDimensionPixelSize(navId))
+  }
   val scroll=ScrollView(this)
   body=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setPadding(dp(20),dp(48),dp(20),dp(30)) }
   scroll.addView(body)
@@ -54,13 +65,14 @@ class MainActivity : Activity() {
     "profiles" -> if(english) "Profiles" else "Профілі"
     else -> if(english) "Settings" else "Опції"
    }
-   nav.addView(label(text,12f,if(page==key) gold else white,true).apply {
+   val symbol=when(key) { "home" -> "⌂"; "features" -> "☷"; "profiles" -> "♙"; else -> "⚙" }
+   nav.addView(label("$symbol  $text",12f,if(page==key) gold else white,true).apply {
     gravity=Gravity.CENTER; setPadding(dp(2),dp(12),dp(2),dp(12)); setOnClickListener { showPage(key) }
    },LinearLayout.LayoutParams(0,-2,1f))
   }
   root.addView(nav,LinearLayout.LayoutParams(-1,dp(76))); setContentView(root)
   body.addView(label("HERCULES",32f,gold,true))
-  body.addView(label("BULLET ECHO  •  v0.3.0",12f,violet,true))
+  body.addView(label("BULLET ECHO  •  v0.4.0",12f,violet,true))
   body.addView(Space(this),LinearLayout.LayoutParams(1,dp(26)))
   when(page) {
    "home" -> {
@@ -80,10 +92,14 @@ class MainActivity : Activity() {
       else -> if(english) key else "Власний профіль"
      }
      card().addView(Switch(this).apply {
-      text=translated; textSize=16f; setTextColor(white); isChecked=prefs.getBoolean(key,false)
-      thumbTintList=android.content.res.ColorStateList.valueOf(gold)
-      trackTintList=android.content.res.ColorStateList.valueOf(Color.rgb(92,67,126))
-      setOnCheckedChangeListener { _,value -> prefs.edit().putBoolean(key,value).apply() }
+      text=translated; textSize=16f; setTextColor(white); isChecked=prefs.getBoolean(prefs.getString("profile","Default")+"_"+key,false)
+      thumbTintList=android.content.res.ColorStateList(
+       arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
+       intArrayOf(gold,Color.rgb(160,154,174)))
+      trackTintList=android.content.res.ColorStateList(
+       arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
+       intArrayOf(Color.rgb(112,66,156),Color.rgb(68,62,81)))
+      setOnCheckedChangeListener { _,value -> prefs.edit().putBoolean(prefs.getString("profile","Default")+"_"+key,value).apply() }
      })
     }
     body.addView(label(if(english) "Switches store preferences only." else "Перемикачі поки лише зберігають налаштування.",12f,violet))
