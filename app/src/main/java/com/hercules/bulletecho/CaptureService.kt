@@ -112,6 +112,8 @@ class CaptureService : Service() {
   val height=image.height
   // Health-bar candidate detector. Only horizontal red bars are considered;
   // arbitrary red effects and isolated pixels are deliberately ignored.
+  val sensitivity=getSharedPreferences("hercules",MODE_PRIVATE).getInt("vision_sensitivity",65).coerceIn(10,100)
+  val minBarSamples=(20-sensitivity/10).coerceIn(10,19)
   val step=2
   val rows=height/step
   val cols=width/step
@@ -127,7 +129,7 @@ class CaptureService : Service() {
    fun considerRun() {
     if(runStart<0) return
     // Approximate width of the in-game health bar in half-resolution capture.
-    if(runLength in 10..85) {
+    if(runLength in minBarSamples..85) {
      val centerX=(runStart+runLength/2f)*step
      val normalizedX=centerX/width
      val normalizedY=y.toFloat()/height
