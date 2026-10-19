@@ -12,6 +12,7 @@ import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
 import android.os.*
 import android.view.WindowManager
+import android.view.Gravity
 
 /**
  * v0.8: opt-in screen capture diagnostics. No input injection, no automatic aim,
@@ -24,6 +25,7 @@ class CaptureService : Service() {
  private var thread:HandlerThread?=null
  private var frames=0L
  private var lastScan=0L
+ private var diagnosticOverlay:DetectionOverlay?=null
  private val callback=object:MediaProjection.Callback() {
   override fun onStop() { stopSelf() }
  }
@@ -45,6 +47,14 @@ class CaptureService : Service() {
    else intent?.getParcelableExtra("token")
   if(token==null) { stopSelf();return START_NOT_STICKY }
   try {
+   if(android.provider.Settings.canDrawOverlays(this)) {
+    val overlay=DetectionOverlay(this)
+    val params=WindowManager.LayoutParams(-1,-1,WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+     WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+     PixelFormat.TRANSLUCENT).apply { gravity=Gravity.TOP or Gravity.START }
+    (getSystemService(WINDOW_SERVICE) as WindowManager).addView(overlay,params)
+    diagnosticOverlay=overlay
+   }
    val mp=getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
    val p=mp.getMediaProjection(Activity.RESULT_OK,token)
    projection=p
@@ -131,6 +141,10 @@ class CaptureService : Service() {
    .apply()
  }
  override fun onDestroy() {
+  diagnosticOverlay?.let { view ->
+   try { (getSystemService(WINDOW_SERVICE) as WindowManager).removeView(view) } catch(_:Exception) {}
+  }
+  diagnosticOverlay=null
   getSharedPreferences("hercules",MODE_PRIVATE).edit().putBoolean("capture_active",false).apply()
   reader?.setOnImageAvailableListener(null,null)
   display?.release()
