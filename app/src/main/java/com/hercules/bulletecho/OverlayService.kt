@@ -18,15 +18,8 @@ import android.os.Looper
 class OverlayService: Service() {
  private lateinit var wm:WindowManager
  private var cross:View?=null
- private var timer:TextView?=null
- private val handler=Handler(Looper.getMainLooper())
- private var started=0L
- private val tick=object:Runnable {
-  override fun run() {
-   timer?.text=String.format(java.util.Locale.US,"⏱ %02d:%02d",(SystemClock.elapsedRealtime()-started)/60000,(SystemClock.elapsedRealtime()-started)/1000%60)
-   if(timer!=null) handler.postDelayed(this,500)
-  }
- }
+ private var bubble:TextView?=null
+ private var menu:android.widget.LinearLayout?=null
  override fun onBind(intent:Intent?):IBinder?=null
  override fun onStartCommand(intent:Intent?,flags:Int,startId:Int):Int {
   if(!Settings.canDrawOverlays(this)) { stopSelf(); return START_NOT_STICKY }
@@ -34,12 +27,12 @@ class OverlayService: Service() {
   when(intent?.action) {
    "cross_on" -> showCross()
    "cross_off" -> { cross?.let { wm.removeView(it) };cross=null }
-   "timer_on" -> showTimer()
-   "timer_off" -> { timer?.let { wm.removeView(it) };timer=null;handler.removeCallbacks(tick) }
-   "timer_reset" -> { started=SystemClock.elapsedRealtime() }
+   "bubble_on" -> showBubble()
+   "bubble_off" -> hideBubble()
+
    "refresh" -> { if(cross!=null) showCross() }
   }
-  if(cross==null && timer==null) stopSelf()
+  if(cross==null && bubble==null) stopSelf()
   return START_STICKY
  }
  private fun params(w:Int,h:Int,gravity:Int)=WindowManager.LayoutParams(w,h,
@@ -68,20 +61,65 @@ class OverlayService: Service() {
   }
   wm.addView(cross,params(-1,-1,Gravity.CENTER))
  }
- private fun showTimer() {
-  if(timer!=null) return
-  started=SystemClock.elapsedRealtime()
-  timer=TextView(this).apply {
-   textSize=19f;setTextColor(Color.rgb(235,186,83))
-   setShadowLayer(5f,1f,2f,Color.BLACK)
-   setPadding(16,12,16,12)
+ private fun hideBubble() {
+  menu?.let { wm.removeView(it) };menu=null
+  bubble?.let { wm.removeView(it) };bubble=null
+ }
+ private fun showBubble() {
+  if(bubble!=null) return
+  bubble=TextView(this).apply {
+   text="H";textSize=22f;setTextColor(Color.rgb(235,186,83));gravity=Gravity.CENTER
+   background=android.graphics.drawable.GradientDrawable().apply {
+    setColor(Color.rgb(57,29,90));cornerRadius=100f
+   }
+   setOnClickListener { toggleMenu() }
   }
-  wm.addView(timer,params(-2,-2,Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply { y=(75*resources.displayMetrics.density).toInt() })
-  handler.post(tick)
+  wm.addView(bubble,params((54*resources.displayMetrics.density).toInt(),(54*resources.displayMetrics.density).toInt(),Gravity.END or Gravity.CENTER_VERTICAL).apply {
+   flags=WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+   x=12
+  })
+ }
+ private fun toggleMenu() {
+  if(menu!=null) { menu?.let { wm.removeView(it) };menu=null;return }
+  val p=getSharedPreferences("hercules",MODE_PRIVATE)
+  val layout=android.widget.LinearLayout(this).apply {
+   orientation=android.widget.LinearLayout.VERTICAL
+   setPadding(20,20,20,20)
+   background=android.graphics.drawable.GradientDrawable().apply {
+    setColor(Color.rgb(34,24,54));cornerRadius=28f
+   }
+  }
+  fun item(title:String,action:()->Unit) {
+   layout.addView(TextView(this).apply {
+    text=title;textSize=17f;setTextColor(Color.WHITE);setPadding(16,16,16,16)
+    setOnClickListener { action() }
+   })
+  }
+  item("🎯 "+if(cross==null)"Увімкнути приціл" else "Вимкнути приціл") {
+   if(cross==null) showCross() else { cross?.let { wm.removeView(it) };cross=null }
+   menu?.let { wm.removeView(it) };menu=null
+  }
+  item("🎨 Змінити колір") {
+   p.edit().putInt("cross_color",(p.getInt("cross_color",0)+1)%4).apply()
+   if(cross!=null) showCross()
+  }
+  item("＋ Збільшити приціл") {
+   p.edit().putInt("cross_size",(p.getInt("cross_size",26)+4).coerceAtMost(64)).apply()
+   if(cross!=null) showCross()
+  }
+  item("－ Зменшити приціл") {
+   p.edit().putInt("cross_size",(p.getInt("cross_size",26)-4).coerceAtLeast(8)).apply()
+   if(cross!=null) showCross()
+  }
+  item("✕ Закрити меню") { menu?.let { wm.removeView(it) };menu=null }
+  menu=layout
+  wm.addView(layout,params((235*resources.displayMetrics.density).toInt(),-2,Gravity.END or Gravity.CENTER_VERTICAL).apply {
+   flags=WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+   x=(72*resources.displayMetrics.density).toInt()
+  })
  }
  override fun onDestroy() {
-  handler.removeCallbacks(tick)
-  cross?.let { wm.removeView(it) };timer?.let { wm.removeView(it) }
+  cross?.let { wm.removeView(it) };hideBubble()
   super.onDestroy()
  }
 }
