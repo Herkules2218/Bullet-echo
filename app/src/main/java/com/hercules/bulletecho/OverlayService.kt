@@ -20,6 +20,7 @@ class OverlayService: Service() {
  private var cross:View?=null
  private var bubble:TextView?=null
  private var menu:android.widget.LinearLayout?=null
+ private var editing=false
  override fun onBind(intent:Intent?):IBinder?=null
  override fun onStartCommand(intent:Intent?,flags:Int,startId:Int):Int {
   if(!Settings.canDrawOverlays(this)) { stopSelf(); return START_NOT_STICKY }
@@ -47,6 +48,17 @@ class OverlayService: Service() {
   val alpha=p.getInt("cross_alpha",90)
   val dot=p.getBoolean("cross_dot",false)
   cross=object:View(this) {
+   var sx=0f;var sy=0f;var bx=0;var by=0
+   override fun onTouchEvent(e:android.view.MotionEvent):Boolean {
+    if(!editing) return false
+    val lp=layoutParams as WindowManager.LayoutParams
+    when(e.actionMasked) {
+     0 -> { sx=e.rawX;sy=e.rawY;bx=lp.x;by=lp.y }
+     2 -> { lp.x=bx+(e.rawX-sx).toInt();lp.y=by+(e.rawY-sy).toInt();wm.updateViewLayout(this,lp) }
+     1 -> { getSharedPreferences("hercules",MODE_PRIVATE).edit().putInt("cross_x",lp.x).putInt("cross_y",lp.y).apply() }
+    }
+    return true
+   }
    private val paint=Paint(3).apply { this.color=color; this.alpha=alpha*255/100; strokeWidth=3f*resources.displayMetrics.density; strokeCap=Paint.Cap.ROUND }
    override fun onDraw(c:Canvas) {
     val x=width/2f;val y=height/2f
@@ -59,7 +71,11 @@ class OverlayService: Service() {
     }
    }
   }
-  wm.addView(cross,params(-1,-1,Gravity.CENTER))
+  val lp=params((100*resources.displayMetrics.density).toInt(),(100*resources.displayMetrics.density).toInt(),Gravity.CENTER).apply {
+   x=p.getInt("cross_x",0);y=p.getInt("cross_y",0)
+   flags=WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or (if(editing) 0 else WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE)
+  }
+  wm.addView(cross,lp)
  }
  private fun hideBubble() {
   menu?.let { wm.removeView(it) };menu=null
@@ -72,7 +88,21 @@ class OverlayService: Service() {
    background=android.graphics.drawable.GradientDrawable().apply {
     setColor(Color.rgb(57,29,90));cornerRadius=100f
    }
-   setOnClickListener { toggleMenu() }
+   setOnTouchListener(object:View.OnTouchListener {
+    var sx=0f;var sy=0f;var bx=0;var by=0;var moved=false
+    override fun onTouch(v:View,e:android.view.MotionEvent):Boolean {
+     val lp=v.layoutParams as WindowManager.LayoutParams
+     when(e.actionMasked) {
+      0 -> {sx=e.rawX;sy=e.rawY;bx=lp.x;by=lp.y;moved=false}
+      2 -> {
+       if(kotlin.math.abs(e.rawX-sx)>12 || kotlin.math.abs(e.rawY-sy)>12) moved=true
+       if(moved) {lp.x=bx-(e.rawX-sx).toInt();lp.y=by+(e.rawY-sy).toInt();wm.updateViewLayout(v,lp)}
+      }
+      1 -> if(!moved) toggleMenu()
+     }
+     return true
+    }
+   })
   }
   wm.addView(bubble,params((54*resources.displayMetrics.density).toInt(),(54*resources.displayMetrics.density).toInt(),Gravity.END or Gravity.CENTER_VERTICAL).apply {
    flags=WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
@@ -110,6 +140,14 @@ class OverlayService: Service() {
   item("－ Зменшити приціл") {
    p.edit().putInt("cross_size",(p.getInt("cross_size",26)-4).coerceAtLeast(8)).apply()
    if(cross!=null) showCross()
+  }
+  item("↔ Перемістити приціл") {
+   menu?.let { wm.removeView(it) };menu=null
+   editing=true;showCross()
+  }
+  item("✓ Зберегти позицію") {
+   editing=false;showCross()
+   menu?.let { wm.removeView(it) };menu=null
   }
   item("✕ Закрити меню") { menu?.let { wm.removeView(it) };menu=null }
   menu=layout
