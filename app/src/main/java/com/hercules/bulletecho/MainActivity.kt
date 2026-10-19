@@ -81,7 +81,7 @@ class MainActivity : Activity() {
   }
   root.addView(nav,LinearLayout.LayoutParams(-1,dp(76))); setContentView(root)
   body.addView(label("HERCULES",32f,gold,true))
-  body.addView(label("BULLET ECHO  •  v0.6.0",12f,violet,true))
+  body.addView(label("BULLET ECHO  •  v0.7.0",12f,violet,true))
   body.addView(Space(this),LinearLayout.LayoutParams(1,dp(26)))
   when(page) {
    "home" -> {
@@ -100,7 +100,15 @@ class MainActivity : Activity() {
     action(if(english) "Disable crosshair" else "Вимкнути приціл") { overlay("cross_off") }
     val aimCard=card()
     aimCard.addView(label("🎯 Aim Assist — Research",18f,gold,true))
-    aimCard.addView(label(if(english) "Target tracking is not active. Requires separate technical development." else "Автоматичне наведення поки не реалізоване. Потрібна окрема розробка.",13f))
+    aimCard.addView(label(if(english) "Research stage: screen capture and target detection are not implemented. No automatic aiming." else "Етап дослідження: захоплення екрана та розпізнавання цілей ще не реалізовані. Автонаведення немає.",13f))
+    val gameCard=card()
+    gameCard.addView(label("🎮 Game Mode",18f,gold,true))
+    gameCard.addView(label(if(english) "Hide the H bubble during play; restore it from this screen." else "Приховуй кнопку H під час гри й повертай її звідси.",13f))
+    val styleCard=card()
+    styleCard.addView(label("🎯 Crosshair Pro — 6 стилів",18f,gold,true))
+    action(if(english) "Next reticle style" else "Наступний стиль прицілу") { prefs.edit().putInt("cross_style",(prefs.getInt("cross_style",0)+1)%6).apply();overlay("refresh") }
+    action(if(english) "Change reticle color" else "Змінити колір прицілу") { prefs.edit().putInt("cross_color",(prefs.getInt("cross_color",0)+1)%4).apply();overlay("refresh") }
+    action(if(english) "Increase line thickness" else "Змінити товщину ліній") { prefs.edit().putInt("cross_thickness",(prefs.getInt("cross_thickness",3)%6)+1).apply();overlay("refresh") }
     val bubbleCard=card()
     bubbleCard.addView(label("💜 HERCULES Floating Menu",18f,gold,true))
     action(if(english) "Show floating H" else "Показати плаваючу H") { overlay("bubble_on") }
