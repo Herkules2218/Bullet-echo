@@ -45,7 +45,7 @@ class OverlayService : Service() {
     };return true
    }
   }
-  val p=WindowManager.LayoutParams(250,130,WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,android.graphics.PixelFormat.TRANSLUCENT).apply{gravity=Gravity.TOP or Gravity.START;x=200;y=400}
+  val p=WindowManager.LayoutParams(250,130,WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,android.graphics.PixelFormat.TRANSLUCENT).apply{this.gravity=Gravity.TOP or Gravity.START;x=200;y=400}
   params=p;overlay=view;wm.addView(view,p)
   return START_NOT_STICKY
  }
