@@ -24,7 +24,7 @@ class OverlayService : Service() {
   val speed=(intent?.getDoubleExtra("speed",90.0)?:90.0).coerceAtLeast(1.0)
   val gravity=32.174
   val time=range/(speed*cos(angle)).coerceAtLeast(0.01)
-  val height=range*tan(angle)-0.5*gravity*time*time
+  val impactHeight=range*tan(angle)-0.5*gravity*time*time
   wm=getSystemService(WINDOW_SERVICE) as WindowManager
   val view=object:View(this){
    val paint=Paint(Paint.ANTI_ALIAS_FLAG)
@@ -35,7 +35,7 @@ class OverlayService : Service() {
     paint.color=Color.RED;paint.style=Paint.Style.STROKE;paint.strokeWidth=4f
     c.drawCircle(cx,cy,19f,paint);c.drawLine(cx-30,cy,cx+30,cy,paint);c.drawLine(cx,cy-30,cx,cy+30,paint)
     paint.style=Paint.Style.FILL;paint.textSize=22f;paint.color=Color.WHITE
-    c.drawText("MODEL: %.1f ft".format(height),12f,35f,paint)
+    c.drawText("MODEL: %.1f ft".format(impactHeight),12f,35f,paint)
     paint.textSize=16f;c.drawText("Drag to align",12f,55f,paint)
    }
    override fun onTouchEvent(e:MotionEvent):Boolean{
